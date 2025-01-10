@@ -6,6 +6,7 @@ import com.fintech.gateway.DTO.ValidResponse;
 import com.fintech.gateway.Service.FeignClient.AuthServiceClient;
 import io.micrometer.common.util.internal.logging.InternalLogger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -43,7 +44,7 @@ public class JwtAuthenticationFilter implements WebFilter {  // Changed from ext
     }
 
     String token = extractToken(exchange);
-    if (token == null) {
+    if (token == null || token.isEmpty()) {
       return respondWithStatus(exchange, HttpStatus.UNAUTHORIZED, "Missing authentication token.");
     }
 
@@ -74,9 +75,17 @@ public class JwtAuthenticationFilter implements WebFilter {  // Changed from ext
     return null;
   }
 
+//  private Mono<Void> respondWithStatus(ServerWebExchange exchange, HttpStatus status, String message) {
+//    exchange.getResponse().setStatusCode(status);
+//    return exchange.getResponse().setComplete();
+//  }
   private Mono<Void> respondWithStatus(ServerWebExchange exchange, HttpStatus status, String message) {
     exchange.getResponse().setStatusCode(status);
-    return exchange.getResponse().setComplete();
+    byte[] bytes = message.getBytes();
+    exchange.getResponse().getHeaders().add("Content-Type", "application/json");
+    DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+    return exchange.getResponse().writeWith(Mono.just(buffer));
   }
+
 
 }
