@@ -5,6 +5,7 @@ import com.fintech.gateway.DTO.TokenRequest;
 import com.fintech.gateway.DTO.ValidResponse;
 import com.fintech.gateway.Service.FeignClient.AuthServiceClient;
 import io.micrometer.common.util.internal.logging.InternalLogger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,10 +25,8 @@ import java.util.List;
 public class JwtAuthenticationFilter implements WebFilter {  // Changed from extending OncePerRequestFilter
 
   private final AuthServiceClient authServiceClient;
-  private static final List<String> EXCLUDED_PATHS = List.of(
-    "/api/auth/login",
-    "/api/auth/register"
-  );
+  @Value("#{'${var.filter.excluded-paths}'.split(',')}")
+  private  List<String> EXCLUDED_PATHS ;
 
   public JwtAuthenticationFilter(AuthServiceClient authServiceClient) {
     this.authServiceClient = authServiceClient;
