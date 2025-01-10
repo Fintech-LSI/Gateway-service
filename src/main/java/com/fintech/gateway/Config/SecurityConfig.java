@@ -1,6 +1,5 @@
 package com.fintech.gateway.Config;
 
-import com.fintech.gateway.Config.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -22,13 +21,12 @@ public class SecurityConfig {
   @Bean
   public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
     return http
-      .csrf(csrf -> csrf.disable())  // Using lambda syntax for consistency
+      .csrf(ServerHttpSecurity.CsrfSpec::disable)
       .authorizeExchange(exchanges -> exchanges
-        .pathMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test","/api/users/test").permitAll()
-        .pathMatchers("/api/auth/validate-token").authenticated()
+        .pathMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test").permitAll()
         .anyExchange().authenticated()
       )
-      .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())  // Important for stateless auth
+      .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
       .addFilterAt(jwtAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION)
       .build();
   }
