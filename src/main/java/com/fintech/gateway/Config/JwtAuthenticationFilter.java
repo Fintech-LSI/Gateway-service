@@ -38,11 +38,11 @@ public class JwtAuthenticationFilter implements WebFilter {  // Changed from ext
     ServerHttpRequest request = exchange.getRequest();
     String path = request.getPath().value();
 
-    // Skip JWT processing for excluded paths
-    if (EXCLUDED_PATHS.contains(path)) {
-      return chain.filter(exchange);
+    for (String excludedPath : EXCLUDED_PATHS) {
+      if (path.startsWith(excludedPath)) {
+        return chain.filter(exchange);
+      }
     }
-
     String token = extractToken(exchange);
     if (token == null || token.isEmpty()) {
       return respondWithStatus(exchange, HttpStatus.UNAUTHORIZED, "Missing authentication token.");
