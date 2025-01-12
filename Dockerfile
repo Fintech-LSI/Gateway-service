@@ -1,14 +1,21 @@
-# Use the OpenJDK 17 slim base image
-FROM openjdk:17-jdk-slim
+# Build stage
+FROM maven:3.9.6-eclipse-temurin-21-slim AS build
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the built JAR file from the target directory
-COPY target/*.jar app.jar
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Expose the default port for the gateway service
-EXPOSE 8080
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Run the application
+# Runtime stage
+FROM eclipse-temurin:21-jre-jammy
+
+WORKDIR /app
+
+COPY --from=build /app/target/*.jar app.jar
+
+EXPOSE 8222
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

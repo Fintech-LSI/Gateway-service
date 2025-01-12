@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gateway-service
-  namespace: application
+  name: gateway-service-deploy
+  namespace: fintech
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: gateway-service
@@ -15,33 +15,25 @@ spec:
     spec:
       containers:
         - name: gateway-service
-          image: ${process.env.ECR_REPO}/gateway-service:latest
+          image: public.ecr.aws/z1z0w2y6/gateway-service:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8222
+          envFrom:
+            - configMapRef:
+                name: gateway-service-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
+              memory: "256Mi"
+              cpu: "150m"
             limits:
-              memory: "1Gi"
-              cpu: "500m"
+              memory: "512Mi"
+              cpu: "300m"
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
+              port: 8222
             initialDelaySeconds: 60
-            periodSeconds: 15
-          env:
-            - name: SPRING_PROFILES_ACTIVE
-              valueFrom:
-                configMapKeyRef:
-                  name: gateway-config
-                  key: spring.profiles.active
-            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-              value: "http://discovery-service.discovery:8761/eureka/
+            periodSeconds: 10
