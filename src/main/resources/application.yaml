@@ -5,4 +5,4 @@ spring:
     import: optional:configserver:http://localhost:8889
 var:
   filter:
-    excluded-paths: /api/auth/login,/api/auth/register,/users/public/images
+    excluded-paths: /api/auth,/users/public/images
