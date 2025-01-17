@@ -24,22 +24,15 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "default"
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "1Gi"
-              cpu: "500m"
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8222
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: 8222
-            initialDelaySeconds: 90
+            initialDelaySeconds: 120
             periodSeconds: 15

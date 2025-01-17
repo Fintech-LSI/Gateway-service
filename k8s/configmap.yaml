@@ -5,6 +5,9 @@ metadata:
   namespace: fintech
 data:
   application.yml: |-
+    server:
+      port: 8222
+
     spring:
       application:
         name: gateway-service
@@ -15,33 +18,32 @@ data:
               uri: http://user-service:8090
               predicates:
                 - Path=/api/users/**
-            
+
+            - id: image-service
+              uri: http://user-service:8090
+              predicates:
+                - Path=/users/public/images/**
+
             - id: wallet-service
               uri: http://wallet-service:8099
               predicates:
-                - Path=/api/wallets/**,/api/currencies/**
-            
-            - id: notification-service
-              uri: http://notification-service:8085
+                - Path=/api/wallets/**
+
+            - id: wallet-service-currency
+              uri: http://wallet-service:8099
               predicates:
-                - Path=/api/notification/**
-            
+                - Path=/api/currencies/**
+
             - id: auth-service
               uri: http://auth-service:8946
               predicates:
                 - Path=/api/auth/**
-            
+
             - id: transaction-service
               uri: http://transaction-service:8599
               predicates:
                 - Path=/api/transaction/**
-      
-      config:
-        import: optional:configserver:http://config-service:8889
-    
-    server:
-      port: 8222
-    
+
     management:
       endpoints:
         web:
@@ -50,7 +52,3 @@ data:
       endpoint:
         health:
           show-details: always
-    
-    var:
-      filter:
-        excluded-paths: /api/auth/login,/api/auth/register,/users/public/images
