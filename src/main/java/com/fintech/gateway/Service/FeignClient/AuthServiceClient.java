@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.FeignClientProperties;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "AUTH-SERVICE" , configuration = FeignClientProperties.FeignClientConfiguration.class)
+@FeignClient(name = "auth-service", url = "http://auth-service:8946")
 public interface AuthServiceClient {
   @PostMapping("/api/auth/validate-token")
   ValidResponse validateToken(@RequestBody TokenRequest tokenRequest);
