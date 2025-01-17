@@ -52,3 +52,5 @@ data:
       endpoint:
         health:
           show-details: always
+      security:
+        enabled: false
