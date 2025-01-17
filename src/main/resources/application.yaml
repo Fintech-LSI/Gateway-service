@@ -6,3 +6,10 @@ spring:
 var:
   filter:
     excluded-paths: /api/auth,/users/public/images
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
