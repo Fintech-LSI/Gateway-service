@@ -10,34 +10,38 @@ data:
         name: gateway-service
       cloud:
         gateway:
-          discovery:
-            locator:
-              enabled: true
           routes:
             - id: user-service
-              uri: http://user-service.fintech.svc.cluster.local
+              uri: http://user-service:8090
               predicates:
                 - Path=/api/users/**
+            
             - id: wallet-service
-              uri: http://wallet-service.fintech.svc.cluster.local
+              uri: http://wallet-service:8099
               predicates:
-                - Path=/api/wallets/**
+                - Path=/api/wallets/**,/api/currencies/**
+            
+            - id: notification-service
+              uri: http://notification-service:8085
+              predicates:
+                - Path=/api/notification/**
+            
             - id: auth-service
-              uri: http://auth-service.fintech.svc.cluster.local
+              uri: http://auth-service:8946
               predicates:
                 - Path=/api/auth/**
+            
+            - id: transaction-service
+              uri: http://transaction-service:8599
+              predicates:
+                - Path=/api/transaction/**
+      
       config:
-        import: optional:configserver:http://config-server.fintech.svc.cluster.local:8889
-
-    eureka:
-      client:
-        serviceUrl:
-          defaultZone: http://discovery-service.fintech.svc.cluster.local:8761/eureka/
-        register-with-eureka: true
-        fetch-registry: true
-      instance:
-        prefer-ip-address: true
-
+        import: optional:configserver:http://config-service:8889
+    
+    server:
+      port: 8222
+    
     management:
       endpoints:
         web:
@@ -46,3 +50,7 @@ data:
       endpoint:
         health:
           show-details: always
+    
+    var:
+      filter:
+        excluded-paths: /api/auth/login,/api/auth/register,/users/public/images

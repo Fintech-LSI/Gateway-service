@@ -26,14 +26,20 @@ spec:
               value: "prod"
           resources:
             requests:
-              memory: "200Mi"
-              cpu: "100m"
+              memory: "512Mi"
+              cpu: "250m"
             limits:
-              memory: "400Mi"
-              cpu: "200m"
+              memory: "1Gi"
+              cpu: "500m"
           readinessProbe:
             httpGet:
               path: /actuator/health
               port: 8222
             initialDelaySeconds: 60
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8222
+            initialDelaySeconds: 90
+            periodSeconds: 15
