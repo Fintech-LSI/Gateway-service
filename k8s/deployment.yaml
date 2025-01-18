@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service-deploy
+  namespace: fintech
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+    spec:
+      containers:
+        - name: gateway-service
+          image: public.ecr.aws/z1z0w2y6/gateway-service:latest
+          ports:
+            - containerPort: 8222
+          envFrom:
+            - configMapRef:
+                name: gateway-service-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "default"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8222
+            initialDelaySeconds: 90
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8222
+            initialDelaySeconds: 120
+            periodSeconds: 15

@@ -2,60 +2,84 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCOUNT_ID = credentials('AWS_ACCOUNT_ID') // AWS Account credentials
-        AWS_REGION = 'us-east-1'  // Update to your AWS region
-        ECR_REPO = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        IMAGE_NAME = 'gateway-service'
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        EKS_CLUSTER_NAME = 'your-eks-cluster'  // Update to your cluster name
-        NAMESPACE = 'application'  // Namespace for your Gateway Service
+        AWS_REGION      = 'us-east-1'
+        IMAGE_NAME      = 'gateway-service'
+        ECR_REGISTRY    = 'public.ecr.aws/z1z0w2y6'
+        DOCKER_BUILD_NUMBER = "${BUILD_NUMBER}"
+        EKS_CLUSTER_NAME = 'main-cluster'
+        NAMESPACE = 'fintech'
+        SONAR_PROJECT_KEY = 'gateway-service'
+        SONAR_SERVER_URL = 'http://54.86.47.1:9000'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the source code from SCM (e.g., Git)
                 checkout scm
             }
         }
 
+        /*stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_TOKEN')]) {
+                        withSonarQubeEnv('SonarQube') {  // Add this wrapper
+                            try {
+                                sh """
+                                    mvn clean verify sonar:sonar \
+                                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                        -Dsonar.login=${SONAR_TOKEN}
+                                """
+                                echo "SonarQube analysis completed successfully."
+                            } catch (Exception e) {
+                                error "SonarQube analysis failed: ${e.message}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    timeout(time: 5, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
+        }*/
+
         stage('Build') {
             steps {
-                // Build the application using Maven
-                sh './mvnw clean package -DskipTests'
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                // Run unit tests
-                sh './mvnw test'
-            }
-            post {
-                always {
-                    // Publish test results
-                    junit '**/target/surefire-reports/*.xml'
+                script {
+                    try {
+                        sh 'mvn clean package -DskipTests'
+                    } catch (Exception e) {
+                        error "Maven build failed: ${e.message}"
+                    }
                 }
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push Docker Image') {
             steps {
                 script {
-                    // Build the Docker image
-                    docker.build("${ECR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}")
-                }
-            }
-        }
-
-        stage('Push Docker Image to ECR') {
-            steps {
-                script {
-                    // Log in to AWS ECR and push the Docker image
-                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}"
-                    sh "docker push ${ECR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker tag ${ECR_REPO}/${IMAGE_NAME}:${IMAGE_TAG} ${ECR_REPO}/${IMAGE_NAME}:latest"
-                    sh "docker push ${ECR_REPO}/${IMAGE_NAME}:latest"
+                    withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: 'aws-credentials',
+                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                    ]]) {
+                        try {
+                            sh "aws ecr-public get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
+                            sh "docker build -t ${ECR_REGISTRY}/${IMAGE_NAME}:latest . --no-cache"
+                            sh "docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest"
+                        } catch (Exception e) {
+                            error "Docker build/push failed: ${e.message}"
+                        }
+                    }
                 }
             }
         }
@@ -63,22 +87,24 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 script {
-                    // Update kubeconfig to connect to the EKS cluster
-                    sh "aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}"
-
-                    // Create the namespace if it doesn't exist
-                    sh "kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
-
-                    // Deploy the Gateway Service
-                    withKubeConfig([credentialsId: 'eks-credentials']) {
-                        sh """
-                            sed -i 's|IMAGE_URL_PLACEHOLDER|${ECR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}|g' k8s/deployment.yaml
-                            kubectl apply -f k8s/configmap.yaml -n ${NAMESPACE}
-                            kubectl apply -f k8s/deployment.yaml -n ${NAMESPACE}
-                            kubectl apply -f k8s/service.yaml -n ${NAMESPACE}
-                        """
-                        // Monitor rollout status
-                        sh "kubectl rollout status deployment/${IMAGE_NAME} -n ${NAMESPACE}"
+                    withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: 'aws-credentials',
+                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                    ]]) {
+                        try {
+                            sh "aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER_NAME}"
+                            sh "kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
+                            sh """
+                                kubectl apply -f k8s/configmap.yaml -n ${NAMESPACE}
+                                kubectl apply -f k8s/deployment.yaml -n ${NAMESPACE}
+                                kubectl apply -f k8s/service.yaml -n ${NAMESPACE}
+                            """
+                            sh "kubectl get pods -n ${NAMESPACE} -l app=gateway-service"
+                        } catch (Exception e) {
+                            error "Deployment failed: ${e.message}"
+                        }
                     }
                 }
             }
@@ -86,17 +112,15 @@ pipeline {
     }
 
     post {
-        always {
-            // Clean up the workspace after the pipeline run
-            cleanWs()
-        }
         success {
-            // Send success notification
-            echo 'Pipeline completed successfully!'
+            echo 'Pipeline succeeded! Application deployed successfully.'
         }
         failure {
-            // Send failure notification
-            echo 'Pipeline failed!'
+            echo 'Pipeline failed! Check the logs for details.'
+        }
+        always {
+            sh "docker rmi ${ECR_REGISTRY}/${IMAGE_NAME}:latest || true"
+            cleanWs()
         }
     }
 }

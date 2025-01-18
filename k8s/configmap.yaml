@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-service-config
+  namespace: fintech
+data:
+  application.yml: |-
+    server:
+      port: 8222
+
+    spring:
+      application:
+        name: gateway-service
+      cloud:
+        gateway:
+          routes:
+            - id: user-service
+              uri: http://user-service:8090
+              predicates:
+                - Path=/api/users/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: image-service
+              uri: http://user-service:8090
+              predicates:
+                - Path=/users/public/images/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: wallet-service
+              uri: http://wallet-service:8099
+              predicates:
+                - Path=/api/wallets/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: wallet-service-currency
+              uri: http://wallet-service:8099
+              predicates:
+                - Path=/api/currencies/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: auth-service
+              uri: http://auth-service:8946
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: transaction-service
+              uri: http://transaction-service:8599
+              predicates:
+                - Path=/api/transaction/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: "*"
+      endpoint:
+        health:
+          show-details: always
+      security:
+        enabled: false

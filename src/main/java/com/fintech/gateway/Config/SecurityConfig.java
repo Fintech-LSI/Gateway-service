@@ -30,10 +30,14 @@ public class SecurityConfig {
 
   @Bean
   public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    String[] patterns = excludeUrls.stream()
+      .map(url -> url.endsWith("/**") ? url : url + "/**")
+      .toArray(String[]::new);
+
     return http
       .csrf(ServerHttpSecurity.CsrfSpec::disable)
       .authorizeExchange(exchanges -> exchanges
-        .pathMatchers(excludeUrls.toArray(new String[0])).permitAll()
+        .pathMatchers(patterns).permitAll()
         .anyExchange().authenticated()
       )
       .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())

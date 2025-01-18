@@ -2,10 +2,19 @@ spring:
   application:
     name: gateway-service
   config:
-    import: optional:configserver:http://localhost:8889
+    import: optional:configserver:http://config-service:8889
 var:
   filter:
-    excluded-paths: /api/auth/login,/api/auth/register
-eureka:
-  instance:
-    prefer-ip-address: true
+    excluded-paths: /api, /users/public/images,/actuator/health
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  security:
+    enabled: false

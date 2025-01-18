@@ -1,6 +1,7 @@
 package com.fintech.gateway.Config;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fintech.gateway.DTO.TokenRequest;
 import com.fintech.gateway.DTO.ValidResponse;
 import com.fintech.gateway.Service.FeignClient.AuthServiceClient;
@@ -8,6 +9,7 @@ import io.micrometer.common.util.internal.logging.InternalLogger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,6 +23,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter {  // Changed from extending OncePerRequestFilter
@@ -38,11 +41,11 @@ public class JwtAuthenticationFilter implements WebFilter {  // Changed from ext
     ServerHttpRequest request = exchange.getRequest();
     String path = request.getPath().value();
 
-    // Skip JWT processing for excluded paths
-    if (EXCLUDED_PATHS.contains(path)) {
-      return chain.filter(exchange);
+    for (String excludedPath : EXCLUDED_PATHS) {
+      if (path.startsWith(excludedPath)) {
+        return chain.filter(exchange);
+      }
     }
-
     String token = extractToken(exchange);
     if (token == null || token.isEmpty()) {
       return respondWithStatus(exchange, HttpStatus.UNAUTHORIZED, "Missing authentication token.");
@@ -61,7 +64,7 @@ public class JwtAuthenticationFilter implements WebFilter {  // Changed from ext
         return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
       })
       .onErrorResume(e -> {
-        return respondWithStatus(exchange, HttpStatus.INTERNAL_SERVER_ERROR, "Error during authentication.");
+        return respondWithStatus(exchange, HttpStatus.INTERNAL_SERVER_ERROR, "Error during authentication ::"+e.getMessage());
       });
   }
 
@@ -79,13 +82,25 @@ public class JwtAuthenticationFilter implements WebFilter {  // Changed from ext
 //    exchange.getResponse().setStatusCode(status);
 //    return exchange.getResponse().setComplete();
 //  }
-  private Mono<Void> respondWithStatus(ServerWebExchange exchange, HttpStatus status, String message) {
-    exchange.getResponse().setStatusCode(status);
-    byte[] bytes = message.getBytes();
-    exchange.getResponse().getHeaders().add("Content-Type", "application/json");
-    DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
-    return exchange.getResponse().writeWith(Mono.just(buffer));
+private Mono<Void> respondWithStatus(ServerWebExchange exchange, HttpStatus status, String message) {
+   ObjectMapper objectMapper = new ObjectMapper();
+
+  exchange.getResponse().setStatusCode(status);
+  exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+  // Create JSON response
+  String jsonResponse;
+  try {
+    jsonResponse = objectMapper.writeValueAsString(Map.of("error", message));
+  } catch (Exception e) {
+    jsonResponse = "{\"error\":\"Failed to create JSON response\"}";
   }
+
+  // Write JSON response
+  byte[] bytes = jsonResponse.getBytes();
+  DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+  return exchange.getResponse().writeWith(Mono.just(buffer));
+}
 
 
 }
