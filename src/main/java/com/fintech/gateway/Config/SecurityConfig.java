@@ -48,7 +48,7 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration corsConfiguration = new CorsConfiguration();
-    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://angular-frontend:4200"));
+    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://angular-frontend"));
     corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
     corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
     corsConfiguration.setAllowCredentials(true);
