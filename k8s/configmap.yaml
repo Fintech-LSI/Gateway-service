@@ -56,6 +56,12 @@ data:
               - Path=/api/notification/**
               filters:
               - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: loans-service
+              uri: http://loans-service:8097
+              predicates:
+                - Path=/api/loans/**
+              filters:
+                - AddResponseHeader=Access-Control-Allow-Origin,*
     management:
       endpoints:
         web:
