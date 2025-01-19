@@ -50,6 +50,12 @@ data:
                 - Path=/api/transaction/**
               filters:
                 - AddResponseHeader=Access-Control-Allow-Origin,*
+            - id: transaction-service
+              uri: http://notification-servicee:8085
+              predicates:
+              - Path=/api/notification/**
+              filters:
+              - AddResponseHeader=Access-Control-Allow-Origin,*
     management:
       endpoints:
         web:

@@ -5,7 +5,7 @@ spring:
     import: optional:configserver:http://config-service:8889
 var:
   filter:
-    excluded-paths: /api, /users/public/images,/actuator/health
+    excluded-paths: /api/auth, /users/public/images,/actuator/health
 
 
 management:
