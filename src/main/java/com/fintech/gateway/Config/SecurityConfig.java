@@ -12,46 +12,70 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
-
   private final JwtAuthenticationFilter jwtAuthFilter;
 
   @Value("#{'${var.filter.excluded-paths}'.split(',')}")
   private List<String> excludeUrls;
+
   public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
     this.jwtAuthFilter = jwtAuthFilter;
   }
 
-
   @Bean
   public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
     String[] patterns = excludeUrls.stream()
-      .map(url -> url.endsWith("/**") ? url : url + "/**")
-      .toArray(String[]::new);
+            .map(url -> url.endsWith("/**") ? url : url + "/**")
+            .toArray(String[]::new);
 
     return http
-      .csrf(ServerHttpSecurity.CsrfSpec::disable)
-      .authorizeExchange(exchanges -> exchanges
-        .pathMatchers(patterns).permitAll()
-        .anyExchange().authenticated()
-      )
-      .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
-      .addFilterAt(jwtAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION)
-      .build();
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .authorizeExchange(exchanges -> exchanges
+                    .pathMatchers(patterns).permitAll()
+                    .anyExchange().authenticated()
+            )
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
+            .addFilterAt(jwtAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+            .build();
   }
 
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration corsConfiguration = new CorsConfiguration();
-    corsConfiguration.setAllowedOrigins(Collections.singletonList("http://angular-frontend"));
-    corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+
+    // Allow all origins
+    corsConfiguration.addAllowedOrigin("*");
+
+    // Allow all common HTTP methods
+    corsConfiguration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
+    ));
+
+    // Allow all headers
     corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
-    corsConfiguration.setAllowCredentials(true);
+
+    // Expose common headers
+    corsConfiguration.setExposedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers"
+    ));
+
+    // Note: When using allowedOrigin="*", allowCredentials must be false
+    corsConfiguration.setAllowCredentials(false);
+
+    // Cache preflight requests for 1 hour
+    corsConfiguration.setMaxAge(3600L);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", corsConfiguration);
